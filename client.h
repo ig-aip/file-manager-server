@@ -1,9 +1,11 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 #include "net.h"
-#include <memory.h>
+#include <memory>
 
 enum class Status{
+    waiting_for_send,
+    waiting_for_accept,
     waiting,
 
     sending,
@@ -16,11 +18,11 @@ enum class Status{
 class Client
 {
     Status status;
-    //endpoint (ip, port)
-    std::shared_ptr<char[64]> username;
+    tcp::endpoint endpoint;
+    std::string username;
 
 public:
-    Client();
+    Client(tcp::endpoint& endpoint);
 };
 
 #endif // CLIENT_H

@@ -1,13 +1,26 @@
 #ifndef SERVER_H
 #define SERVER_H
-#include "net.h"
 
-class Server
+#include "client.h"
+#include "net.h"
+#include "logger.h"
+#include <unordered_map>
+
+
+class Server : public std::enable_shared_from_this<Server>
 {
-    asio::io_context& ioc;
+    asio::io_context ioc;
+    tcp::acceptor acceptor;
+    std::unordered_map<boost::uuids::uuid,Client> clients;
+
+    void start_acceptor();
+    boost::uuids::uuid generateUUID() const;
 
 public:
-    Server(asio::io_context& ioc);
+    void addClient(tcp::endpoint endpoint);
+    Logger logger;
+    Server();
+    void start();
 };
 
 #endif // SERVER_H

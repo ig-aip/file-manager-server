@@ -1,6 +1,9 @@
 #include "net.h"
-
+#include <iostream>
+#include "server.h"
 int main()
 {
-    asio::io_context ioc;
+    auto serv = std::make_shared<Server>();
+    serv->start();
+
 }

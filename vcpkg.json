@@ -2,7 +2,7 @@
   "name": "file-manager-server",
   "version-string": "1.0.0",
   "dependencies": [
-    "boost-asio"
+    "boost-asio",
     "boost-uuid"
   ]
 }

@@ -1,0 +1,4 @@
+Failed to load manifest from directory /home/igore/Documents/file-manager-server
+/home/igore/Documents/file-manager-server/vcpkg.json:6:5: error: Unexpected character in middle of array
+  on expression:     "boost-uuid"
+                     ^

@@ -10,12 +10,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Core)
 
 add_executable(file-manager-server
   main.cpp
-  server.h server.cpp
+  client.cpp client.h
+
+
+  fileTransfer.cpp fileTransfer.h
+  server.cpp server.h
+  logger.cpp logger.h
   net.h
-  client.h client.cpp
+
 )
-target_link_libraries(file-manager-server Boost::boost ws2_32 mswsock)
+target_link_libraries(file-manager-server Boost::boost Qt5::Core)
 

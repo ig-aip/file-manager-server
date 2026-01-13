@@ -1,3 +1,5 @@
 #include "client.h"
 
-Client::Client() {}
+Client::Client(tcp::endpoint& endpoint) :
+    endpoint(endpoint) {
+}

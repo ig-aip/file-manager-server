@@ -1,0 +1,79 @@
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+The following packages are already installed:
+  * boost-algorithm:x64-linux@1.90.0
+  * boost-align:x64-linux@1.90.0
+  * boost-array:x64-linux@1.90.0
+    boost-asio[core,deadline-timer,spawn]:x64-linux@1.90.0
+  * boost-assert:x64-linux@1.90.0
+  * boost-bind:x64-linux@1.90.0
+  * boost-cmake:x64-linux@1.90.0
+  * boost-concept-check:x64-linux@1.90.0
+  * boost-config:x64-linux@1.90.0
+  * boost-container:x64-linux@1.90.0
+  * boost-container-hash:x64-linux@1.90.0
+  * boost-context:x64-linux@1.90.0
+  * boost-conversion:x64-linux@1.90.0
+  * boost-core:x64-linux@1.90.0
+  * boost-date-time:x64-linux@1.90.0
+  * boost-describe:x64-linux@1.90.0
+  * boost-detail:x64-linux@1.90.0
+  * boost-exception:x64-linux@1.90.0
+  * boost-function:x64-linux@1.90.0
+  * boost-function-types:x64-linux@1.90.0
+  * boost-functional:x64-linux@1.90.0
+  * boost-fusion:x64-linux@1.90.0
+  * boost-headers:x64-linux@1.90.0
+  * boost-integer:x64-linux@1.90.0
+  * boost-intrusive:x64-linux@1.90.0
+  * boost-io:x64-linux@1.90.0
+  * boost-iterator:x64-linux@1.90.0
+  * boost-lexical-cast:x64-linux@1.90.0
+  * boost-move:x64-linux@1.90.0
+  * boost-mp11:x64-linux@1.90.0
+  * boost-mpl:x64-linux@1.90.0
+  * boost-numeric-conversion:x64-linux@1.90.0
+  * boost-optional:x64-linux@1.90.0
+  * boost-pool:x64-linux@1.90.0
+  * boost-predef:x64-linux@1.90.0
+  * boost-preprocessor:x64-linux@1.90.0
+  * boost-range:x64-linux@1.90.0
+  * boost-regex:x64-linux@1.90.0
+  * boost-smart-ptr:x64-linux@1.90.0
+  * boost-static-assert:x64-linux@1.90.0
+  * boost-system:x64-linux@1.90.0
+  * boost-throw-exception:x64-linux@1.90.0
+  * boost-tokenizer:x64-linux@1.90.0
+  * boost-tuple:x64-linux@1.90.0
+  * boost-type-traits:x64-linux@1.90.0
+  * boost-typeof:x64-linux@1.90.0
+  * boost-uninstall:x64-linux@1.90.0
+  * boost-unordered:x64-linux@1.90.0
+  * boost-utility:x64-linux@1.90.0
+    boost-uuid:x64-linux@1.90.0
+  * boost-variant2:x64-linux@1.90.0
+  * boost-winapi:x64-linux@1.90.0
+  * vcpkg-boost:x64-linux@2025-03-29
+  * vcpkg-cmake:x64-linux@2024-04-23
+  * vcpkg-cmake-config:x64-linux@2024-05-23
+The package boost-asio is compatible with built-in CMake targets of FindBoost.cmake:
+
+    find_package(Boost REQUIRED COMPONENTS asio)
+    target_link_libraries(main PRIVATE Boost::asio)
+
+or the generated cmake configs via:
+
+    find_package( REQUIRED CONFIG)
+    target_link_libraries(main PRIVATE Boost::asio)
+
+The package boost-uuid is compatible with built-in CMake targets of FindBoost.cmake:
+
+    find_package(Boost REQUIRED COMPONENTS uuid)
+    target_link_libraries(main PRIVATE Boost::uuid)
+
+or the generated cmake configs via:
+
+    find_package( REQUIRED CONFIG)
+    target_link_libraries(main PRIVATE Boost::uuid)
+
+All requested installations completed successfully in: 381 us
