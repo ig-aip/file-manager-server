@@ -1,5 +1,6 @@
 #include "server.h"
 #include <iostream>
+#include "fileTransfer.h"
 Server::Server() :
     ioc(),
     acceptor(ioc,tcp::endpoint(ip::make_address_v4(IP), PORT)){
@@ -11,13 +12,16 @@ boost::uuids::uuid Server::generateUUID() const{
     return generate();
 }
 
-void Server::addClient(tcp::endpoint endpoint){
-    clients.emplace(generateUUID(), endpoint);
+boost::uuids::uuid Server::addClient(tcp::endpoint endpoint){
+    boost::uuids::uuid uuid = generateUUID();
+    clients.emplace(uuid, endpoint);
+    return uuid;
 }
 
 void Server::start(){
 
-    std::cout << generateUUID() << std::endl;
+    std::cout << (int) Status::receive_complete << std::endl;
+
     start_acceptor();
 
     unsigned int threads = std::max(1u, std::thread::hardware_concurrency());
@@ -44,7 +48,13 @@ void Server::start_acceptor(){
     acceptor.async_accept(*sock,
                           [self, sock](const boost::system::error_code& er){
                               if(!er){
-                                  self->addClient(sock->remote_endpoint());
+
+                                  std::cout << "connected" <<std::endl;
+                                  auto transfer = std::make_shared<FileTransfer>(sock,
+                                                                                 self->addClient(sock->remote_endpoint()),
+                                                                                 self->logger,
+                                                                                 self->clients);
+                                  transfer->startFileSend();
                               }else{
                                   std::stringstream ss;
                                   ss << "error in accept, ip : " << sock->remote_endpoint().address().to_string()

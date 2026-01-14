@@ -9,10 +9,10 @@ enum class Status{
     waiting,
 
     sending,
-    sending_compleat,
+    sending_complete,
 
-    reciving,
-    recive_compleat
+    receiving,
+    receive_complete
 };
 
 class Client
@@ -23,6 +23,23 @@ class Client
 
 public:
     Client(tcp::endpoint& endpoint);
+
+    std::string& getUsernameLink();
+
+    // waiting
+    void setWaitingForSend();
+    void setWaitingForAccept();
+    void setWaiting();
+
+    // sending
+    void setSending();
+    void setSendingComplete();
+
+    // receiving
+    void setReceiving();
+    void setReceiveComplete();
+
+    Status& getStatus();
 };
 
 #endif // CLIENT_H

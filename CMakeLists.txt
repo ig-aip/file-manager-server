@@ -6,7 +6,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
@@ -23,5 +23,5 @@ add_executable(file-manager-server
   net.h
 
 )
-target_link_libraries(file-manager-server Boost::boost Qt5::Core)
+target_link_libraries(file-manager-server Boost::boost Qt5::Core ws2_32 mswsock)
 

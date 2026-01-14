@@ -17,7 +17,7 @@ class Server : public std::enable_shared_from_this<Server>
     boost::uuids::uuid generateUUID() const;
 
 public:
-    void addClient(tcp::endpoint endpoint);
+    boost::uuids::uuid addClient(tcp::endpoint endpoint);
     Logger logger;
     Server();
     void start();

@@ -2,8 +2,10 @@
 #define NETWORK_H
 #include "net.h"
 #include "logger.h"
+#include "client.h"
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 class FileReciver
 {
@@ -31,12 +33,18 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
     std::shared_ptr<tcp::socket> socket;
     boost::uuids::uuid uuid;
     Logger& logger;
+    std::unordered_map<boost::uuids::uuid, Client> & clients;
+    Client& client;
+
 
     void reciveName();
     void sendUUID();
+    void receiveClientStatus();
 
 public:
-    FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger);
+    FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger,
+                 std::unordered_map<boost::uuids::uuid, Client> & clients);
+
     void startFileSend();
 };
 
