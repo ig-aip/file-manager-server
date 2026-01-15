@@ -55,6 +55,7 @@ void Server::start_acceptor(){
                                                                                  self->logger,
                                                                                  self->clients);
                                   transfer->startFileSend();
+
                               }else{
                                   std::stringstream ss;
                                   ss << "error in accept, ip : " << sock->remote_endpoint().address().to_string()

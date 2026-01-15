@@ -1,5 +1,0 @@
-/home/igore/Documents/file-manager-server/build/Desktop_Qt_5_15_2_GCC_64bit-Debug/CMakeFiles/file-manager-server.dir
-/home/igore/Documents/file-manager-server/build/Desktop_Qt_5_15_2_GCC_64bit-Debug/CMakeFiles/edit_cache.dir
-/home/igore/Documents/file-manager-server/build/Desktop_Qt_5_15_2_GCC_64bit-Debug/CMakeFiles/rebuild_cache.dir
-/home/igore/Documents/file-manager-server/build/Desktop_Qt_5_15_2_GCC_64bit-Debug/CMakeFiles/file-manager-server_autogen_timestamp_deps.dir
-/home/igore/Documents/file-manager-server/build/Desktop_Qt_5_15_2_GCC_64bit-Debug/CMakeFiles/file-manager-server_autogen.dir
