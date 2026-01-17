@@ -9,6 +9,17 @@ std::string& Client::getUsernameLink(){
     return username;
 }
 
+tcpHeader& Client::getTcpHeader(){
+    return header;
+}
+
+
+void Client::setSocket(std::shared_ptr<tcp::socket>  socketNew){
+    socket = socketNew;
+}
+std::shared_ptr<tcp::socket> Client::getSocket(){
+    return socket;
+}
 
 void Client::setWaitingForSend()
 {

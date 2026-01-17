@@ -1,7 +1,8 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 #include "net.h"
-#include <memory>
+#include "tcpHeader.h"
+
 
 enum class Status{
     waiting_for_send,
@@ -20,11 +21,18 @@ class Client
     Status status;
     tcp::endpoint endpoint;
     std::string username;
+    tcpHeader header;
+    std::shared_ptr<tcp::socket> socket;
 
 public:
     Client(tcp::endpoint& endpoint);
 
     std::string& getUsernameLink();
+    tcpHeader& getTcpHeader();
+
+    void setSocket(std::shared_ptr<tcp::socket> socket_);
+    std::shared_ptr<tcp::socket> getSocket();
+
 
     // waiting
     void setWaitingForSend();

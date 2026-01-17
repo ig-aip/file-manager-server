@@ -1,6 +1,6 @@
 #ifndef NET_H
 #define NET_H
-#define IP "25.4.194.225"
+#define IP "127.0.0.1"
 #define PORT 55555
 #define USERNAME_LENGHT 64
 #include<boost/asio.hpp>

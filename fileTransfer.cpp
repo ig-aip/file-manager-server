@@ -22,9 +22,7 @@ FileTransfer::FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uu
 }
 
 void FileTransfer::sendUUID(){
-    std::array<char, 16> byteBuffer;
     auto self = shared_from_this();
-    std::copy(uuid.begin(), uuid.end(), byteBuffer.begin());
     socket->async_write_some(boost::asio::buffer(uuid), [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
             self->reciveName();
@@ -37,11 +35,41 @@ void FileTransfer::sendUUID(){
     });
 }
 
+
+void FileTransfer::sendTcpHeader(Client& acceptedClient){
+    auto self = shared_from_this();
+    asio::async_write(*acceptedClient.getSocket(), asio::buffer(&client.getTcpHeader(), sizeof(tcpHeader)), [](boost::system::error_code er, std::size_t bytes){
+        //Начать отправлять файл если всё хорошо
+    });
+}
+
+void FileTransfer::readTcpHeader(){
+    auto self = shared_from_this();
+    asio::async_read(*socket, asio::buffer(&client.getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
+        if(!er){
+            if(self->client.getStatus() == Status::waiting_for_send){ //если клиент отправляет
+                self->sendTcpHeader(self->clients.find(self->client.getTcpHeader().uuid)->second);
+            }
+            else if(self->client.getStatus() == Status::waiting_for_accept){ //если клиент принимает
+                //НАчать принимать файл
+            }
+        }
+    });
+}
+
 void FileTransfer::receiveClientStatus(){
 
     auto self = shared_from_this();
-    asio::async_read(*socket, asio::buffer(&client.getStatus(), sizeof(status)), [self](boost::system::error_code er, std::size_t bytes){
-
+    asio::async_read(*socket, asio::buffer(&client.getStatus(), sizeof(Status)), [self](boost::system::error_code er, std::size_t bytes){
+        if(!er){
+            if(self->client.getStatus() == Status::waiting_for_accept){ //принимающая сторона принимает мета информаци о файле
+                self->client.setSocket(self->socket);
+                // отправить тспХэдер принимающему клиенту
+            }
+            else if(self->client.getStatus() == Status::waiting_for_send){ //отправляющая сторона отправляет мета информацию о файле
+                self->readTcpHeader();
+            }
+        }
     });
 }
 

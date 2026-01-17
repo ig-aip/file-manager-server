@@ -40,6 +40,8 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
     void reciveName();
     void sendUUID();
     void receiveClientStatus();
+    void sendTcpHeader(Client& acceptedClient);
+    void readTcpHeader();
 
 public:
     FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger,

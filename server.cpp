@@ -3,7 +3,33 @@
 #include "fileTransfer.h"
 Server::Server() :
     ioc(),
-    acceptor(ioc,tcp::endpoint(ip::make_address_v4(IP), PORT)){
+    acceptor(ioc){
+
+    boost::system::error_code er;
+    acceptor.open(tcp::endpoint{ip::make_address_v4(IP), PORT}.protocol(), er);
+    if(er){
+        logger.message(std::string{"cant open acceptor, Error: "}.append(er.what()));
+        return;
+    }
+
+    acceptor.set_option(asio::socket_base::reuse_address(true), er);
+    if(er){
+        logger.message(std::string{"cant set reuse address true, Error: "}.append(er.what()));
+        return;
+    }
+
+    acceptor.bind(tcp::endpoint{ip::make_address_v4(IP), PORT}, er);
+    if(er){
+        logger.message(std::string{"cant bind acceptor, Error: "}.append(er.what()));
+        return;
+    }
+
+
+    acceptor.listen(asio::socket_base::max_listen_connections, er);
+    if(er){
+        logger.message(std::string{"cant listen acceptor, Error: "}.append(er.what()));
+        return;
+    }
 
 }
 
@@ -20,7 +46,6 @@ boost::uuids::uuid Server::addClient(tcp::endpoint endpoint){
 
 void Server::start(){
 
-    std::cout << (int) Status::receive_complete << std::endl;
 
     start_acceptor();
 
@@ -34,7 +59,7 @@ void Server::start(){
                 self->ioc.run();
 
             }catch(std::exception& ex){
-                self->logger.message(ex.what());
+                self->logger.message(std::string{"error in threads io_context run: "}.append(ex.what()));
             }
         });
     }
@@ -57,11 +82,8 @@ void Server::start_acceptor(){
                                   transfer->startFileSend();
 
                               }else{
-                                  std::stringstream ss;
-                                  ss << "error in accept, ip : " << sock->remote_endpoint().address().to_string()
-                                     << " port: " << sock->remote_endpoint().port()
-                                     << "error: " << er.message();
-                                  self->logger.message(ss.str());
+                                  self->logger.message(std::string{"err in accept, error: "}.append(er.what()));
+
                               }
 
                               self->start_acceptor();
