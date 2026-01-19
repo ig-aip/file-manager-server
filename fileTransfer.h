@@ -36,7 +36,7 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
     std::unordered_map<boost::uuids::uuid, Client> & clients;
     Client& client;
 
-
+    void sendName(std::string name64Byte);
     void reciveName();
     void sendUUID();
     void receiveClientStatus();
