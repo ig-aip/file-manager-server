@@ -4,16 +4,19 @@
 #include "tcpHeader.h"
 
 
-enum class Status{
-    waiting_for_send,
-    waiting_for_accept,
-    waiting,
+enum class Status : uint8_t{
+    waiting_for_send = 0,
+    waiting_for_accept = 1,
+    waiting = 2,
 
-    sending,
-    sending_complete,
+    sending = 3,
+    sending_complete = 4,
 
-    receiving,
-    receive_complete
+    receiving = 5,
+    receive_complete = 6,
+
+    Connected = 7,
+    Disconnected = 8
 };
 
 class Client
@@ -23,9 +26,17 @@ class Client
     std::string username;
     tcpHeader header;
     std::shared_ptr<tcp::socket> socket;
+    boost::uuids::uuid uuid;
+    Client* pairClient = nullptr;
 
 public:
     Client(tcp::endpoint& endpoint);
+
+    void setPairClient(Client* pClient);
+    Client* getPairClient();
+
+    void setUUID(boost::uuids::uuid uuid);
+    boost::uuids::uuid* getUUIDp();
 
     std::string& getUsernameLink();
     tcpHeader& getTcpHeader();

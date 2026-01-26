@@ -2,6 +2,25 @@
 
 Client::Client(tcp::endpoint& endpoint) :
     endpoint(endpoint) {
+    username.resize(64);
+}
+
+
+
+void Client::setPairClient(Client* pClient){
+    pairClient = pClient;
+}
+
+Client* Client::getPairClient(){
+    return pairClient;
+}
+
+
+void Client::setUUID(boost::uuids::uuid uuid){
+    this->uuid = uuid;
+}
+boost::uuids::uuid* Client::getUUIDp(){
+    return &uuid;
 }
 
 

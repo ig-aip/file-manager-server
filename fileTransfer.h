@@ -35,12 +35,18 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
     Logger& logger;
     std::unordered_map<boost::uuids::uuid, Client> & clients;
     Client& client;
+    std::vector<char> chunk;
+    std::array<char, 128> buf;
+
+    void sendFileFromAccept();
 
     void sendName(std::string name64Byte);
     void reciveName();
+
+    void receiveUUID();
     void sendUUID();
     void receiveClientStatus();
-    void sendTcpHeader(Client& acceptedClient);
+    void sendTcpHeader(Client* acceptedClient);
     void readTcpHeader();
 
 public:
