@@ -59,4 +59,3 @@ add_executable(file-manager-server
   main.cpp
 )
 target_link_libraries(file-manager-server PRIVATE server)
-
