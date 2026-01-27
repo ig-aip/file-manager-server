@@ -5,13 +5,15 @@
 #include "net.h"
 #include "logger.h"
 #include <unordered_map>
+#include <mutex>
 
 
 class Server : public std::enable_shared_from_this<Server>
 {
     asio::io_context ioc;
     tcp::acceptor acceptor;
-    std::unordered_map<boost::uuids::uuid,Client> clients;
+    std::unordered_map<boost::uuids::uuid,std::shared_ptr<Client>> clients;
+    std::mutex clientMutex;
 
     void start_acceptor();
     boost::uuids::uuid generateUUID() const;
