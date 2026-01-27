@@ -7,11 +7,11 @@ Client::Client(tcp::endpoint& endpoint) :
 
 
 
-void Client::setPairClient(Client* pClient){
+void Client::setPairClient(boost::uuids::uuid pClient){
     pairClient = pClient;
 }
 
-Client* Client::getPairClient(){
+boost::uuids::uuid Client::getPairClient(){
     return pairClient;
 }
 

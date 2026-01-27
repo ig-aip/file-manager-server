@@ -13,44 +13,55 @@
 
 //Transfer
 FileTransfer::FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger,
-                           std::unordered_map<boost::uuids::uuid, Client> & clients):
+                           std::unordered_map<boost::uuids::uuid, std::shared_ptr<Client>> & clients):
     socket(socket),
     uuid(uuid),
     logger(logger),
     clients(clients),
     client(clients.find(uuid)->second)
 {
-    client.setUUID(uuid);
+    client->setUUID(uuid);
     chunk.resize(CHUNK_SIZE);
 }
 
 void FileTransfer::receiveUUID(){
     auto acUUID = std::make_shared<boost::uuids::uuid>();
+
     auto self = shared_from_this();
-    asio::async_read(*socket, asio::buffer(*acUUID), [self, acUUID](boost::system::error_code er, std::size_t bytes){
-        std::cout << boost::uuids::to_string(*acUUID);
+    asio::async_read(*socket, asio::buffer(acUUID->data(), acUUID->size()), [self, acUUID](boost::system::error_code er, std::size_t bytes){
+        //std::cout << boost::uuids::to_string(*acUUID) << std::endl;
+        std::cout << *acUUID <<std::endl;
         if(!er){
-            //если есть то поинтер возьмётся, если нету то возьмется nullptr
-            self->client.setPairClient(self->clients.find(*acUUID) != self->clients.end() ? &self->clients.find(*acUUID)->second :
-                                           nullptr);
-
-
-            if(self->client.getPairClient()){
-                if(self->client.getPairClient()->getPairClient() == nullptr){ // если принимающие клиент никого не принимает
-                    self->client.getPairClient()->setPairClient(&self->client);
-                    self->sendName(self->client.getPairClient()->getUsernameLink());
-                    std::cout << self->client.getPairClient()->getUsernameLink() << std::endl;
-                }else{
-                    //кого то принимает
+            std::shared_ptr<Client> targetClient = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(self->mtx);
+                auto it = self->clients.find(*acUUID);
+                if(it != self->clients.end()){
+                    targetClient = it->second;
                 }
-            }else {
+            }
+
+            std::cout << " NEEDED UUID: " << *acUUID << " bytes: "<< bytes << "uuid size: " << acUUID->size()<<std::endl;
+
+            if(targetClient)
+            {
+                std::cout <<"FINDED : "<< targetClient->getUsernameLink() << "UUID: " << *targetClient->getUUIDp() << std::endl;
+                //если uuid и paiClient совпадаютЮ значит с targetCLient никто не связан
+                if(targetClient->getPairClient() == *targetClient->getUUIDp()){
+                    targetClient->setPairClient(*self->client->getUUIDp());
+                    self->client->setPairClient(*targetClient->getUUIDp());
+                    self->sendName(targetClient->getUsernameLink());
+
+                }else{
+                    // кто то уже занял принимающий сокет
+                    std::cout << "NOT FREE" << std::endl;
+                }
+
+            }else{
                 std::string sendName{"N"};
                 sendName.resize(64);
                 self->sendName(sendName);
-                self->receiveUUID();
             }
-
-
         }else{
             std::stringstream ss;
             ss << "error in receive uuid from ip: " << self->socket->remote_endpoint().address()
@@ -63,7 +74,7 @@ void FileTransfer::receiveUUID(){
 
 void FileTransfer::sendUUID(){
     auto self = shared_from_this();
-    socket->async_write_some(boost::asio::buffer(*client.getUUIDp()), [self](boost::system::error_code er, std::size_t bytes){
+    socket->async_write_some(boost::asio::buffer(client->getUUIDp()->data(), client->getUUIDp()->size()), [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
             self->reciveName();
         }else{
@@ -76,22 +87,28 @@ void FileTransfer::sendUUID(){
 }
 
 
-void FileTransfer::sendTcpHeader(Client* acceptedClient){
+void FileTransfer::sendTcpHeader(std::shared_ptr<Client> acceptedClient){
     auto self = shared_from_this();
-    asio::async_write(*acceptedClient->getSocket(), asio::buffer(&client.getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
+    asio::async_write(*acceptedClient->getSocket(), asio::buffer(&client->getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
         self->receiveClientStatus(); // надо узнать, согласен ликлент на принятие файла
     });
 }
 
 void FileTransfer::readTcpHeader(){
     auto self = shared_from_this();
-    asio::async_read(*socket, asio::buffer(&client.getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
+    asio::async_read(*socket, asio::buffer(&client->getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            if(self->client.getStatus() == Status::waiting_for_send){ //если клиент отправляет
+            if(self->client->getStatus() == Status::waiting_for_send){ //если клиент отправляет
                 //отпарвляем мета инфу о том, какое имя у файла, какой username и uuid
-                //self->sendTcpHeader(self->clients.find(self->client.getTcpHeader().uuid)->second);
-                //если клиент существет то возьмётся указатель, если нет, то нулптр
-                self->sendTcpHeader(self->client.getPairClient());
+
+                std::lock_guard<std::mutex> lock(self->mtx);
+                auto it = self->clients.find(self->client->getPairClient());
+                if(it != self->clients.end()){
+                    self->sendTcpHeader(it->second);
+                }else{
+                    //потеря соединение с другой стороной
+                }
+
             }
             // else if(self->client.getStatus() == Status::waiting_for_accept){ //если клиент принимает
             //     //НАчать принимать файл
@@ -101,13 +118,29 @@ void FileTransfer::readTcpHeader(){
 }
 
 void FileTransfer::sendFileFromAccept(){
-    if(client.getPairClient() != nullptr){
+    //если есть какая то связь
+    if(client->getPairClient() != *client->getUUIDp()){
         auto self = shared_from_this();
-        asio::async_read(*client.getPairClient()->getSocket(), asio::buffer(chunk), [self](boost::system::error_code er, std::size_t bytes){
-            std::cout << "bytes: " << bytes << std::endl;
-            asio::async_write(*self->client.getSocket(), asio::buffer(self->chunk), [self](boost::system::error_code er, std::size_t bytes){
-                self->sendFileFromAccept();
-            });
+        std::lock_guard<std::mutex> lock(mtx);
+        clients.find(client->getPairClient())->second->getSocket()->async_read_some(asio::buffer(chunk.data(), chunk.size()),
+                                                                                    [self](boost::system::error_code er, std::size_t bytesRead){
+            if(bytesRead == 0){
+                std::cout <<"compleated " << std::endl;
+                return;
+            }
+            if(!er){
+                asio::async_write(*self->client->getSocket(),asio::buffer(self->chunk.data(), bytesRead), [self](boost::system::error_code er1, std::size_t bytesWrite){
+                    if(!er1){
+                        self->sendFileFromAccept();
+                    }else{
+                        std::cout << "file trader " <<er1.what() << std::endl;
+                        return;
+                    }
+                });
+            }else{
+                std::cout << "file trader " <<er.what() << std::endl;
+                return;
+            }
         });
     }
 
@@ -117,25 +150,25 @@ void FileTransfer::sendFileFromAccept(){
 void FileTransfer::receiveClientStatus(){
 // читаем и проверяем, клиент принимает или отправляет файлы по статусу
     auto self = shared_from_this();
-    asio::async_read(*socket, asio::buffer(&client.getStatus(), sizeof(Status)), [self](boost::system::error_code er, std::size_t bytes){
-        self->client.getStatus() = (Status)((int)self->client.getStatus());
-        std::cout <<"bytes: "<< bytes << "status: "<< (int) self->client.getStatus() << std::endl;
+    asio::async_read(*socket, asio::buffer(&client->getStatus(), sizeof(Status)), [self](boost::system::error_code er, std::size_t bytes){
+        self->client->getStatus() = (Status)((int)self->client->getStatus());
+        std::cout <<"bytes: "<< bytes << "status: "<< (int) self->client->getStatus() << std::endl;
         if(!er){
 
-            if(self->client.getStatus() == Status::waiting_for_accept){ //принимающая сторона
-                self->client.setSocket(self->socket);
-                std::cout << "ACCEPT : " << self->client.getUsernameLink() << std::endl;
+            if(self->client->getStatus() == Status::waiting_for_accept){ //принимающая сторона
+                self->client->setSocket(self->socket);
+                std::cout << "ACCEPT : " << self->client->getUsernameLink() << std::endl;
                 self ->receiveClientStatus(); //получаем Status::reciveing для начала отправления файла
                 //  принимающий клиент заносит свой сокет в unordered_map, позже на этот сокет будет отправлена информация
             }
-            else if(self->client.getStatus() == Status::receiving){
-                if(self->client.getPairClient() != nullptr){
+            else if(self->client->getStatus() == Status::receiving){
+                if(self->client->getPairClient() != *self->client->getUUIDp()){
                     self->sendFileFromAccept();
-                    std::cout << "RECIVE : " << self->client.getUsernameLink() << std::endl;
+                    std::cout << "RECIVE : " << self->client->getUsernameLink() << std::endl;
                 }
             }
-            else if(self->client.getStatus() == Status::waiting_for_send){ //отправляющая сторона отправляет мета информацию о файле нам на сервер
-                std::cout << "SENDING : " << self->client.getUsernameLink() << std::endl;
+            else if(self->client->getStatus() == Status::waiting_for_send){ //отправляющая сторона отправляет мета информацию о файле нам на сервер
+                std::cout << "SENDING : " << self->client->getUsernameLink() << std::endl;
                 self->receiveUUID();
             }
         }
@@ -147,7 +180,7 @@ void FileTransfer::sendName(std::string name64Byte){
     auto self = shared_from_this();
     asio::async_write(*socket, asio::buffer(name64Byte), [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            std::cout << "name: " << self->client.getPairClient()->getUsernameLink().size() << '\n';
+            std::cout << "name: "  << '\n';
             self->readTcpHeader();
         } else{
             std::stringstream ss;
@@ -163,10 +196,10 @@ void FileTransfer::sendName(std::string name64Byte){
 void FileTransfer::reciveName(){
 
     auto self = shared_from_this();
-    socket->async_read_some(asio::buffer(client.getUsernameLink()),
+    socket->async_read_some(asio::buffer(client->getUsernameLink()),
                      [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            std::cout << "Name: " << self->client.getUsernameLink()  << " bytes: " << bytes  << std::endl;
+            std::cout << "Name: " << self->client->getUsernameLink()  << " bytes: " << bytes  << std::endl;
             self->receiveClientStatus();
         }else{
             std::stringstream ss;

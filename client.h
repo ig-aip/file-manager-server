@@ -27,13 +27,13 @@ class Client
     tcpHeader header;
     std::shared_ptr<tcp::socket> socket;
     boost::uuids::uuid uuid;
-    Client* pairClient = nullptr;
+    boost::uuids::uuid pairClient;
 
 public:
     Client(tcp::endpoint& endpoint);
 
-    void setPairClient(Client* pClient);
-    Client* getPairClient();
+    void setPairClient(boost::uuids::uuid pClient);
+    boost::uuids::uuid getPairClient();
 
     void setUUID(boost::uuids::uuid uuid);
     boost::uuids::uuid* getUUIDp();
