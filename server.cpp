@@ -40,7 +40,11 @@ boost::uuids::uuid Server::generateUUID() const{
 
 boost::uuids::uuid Server::addClient(tcp::endpoint endpoint){
     boost::uuids::uuid uuid = generateUUID();
-    clients.emplace(uuid, endpoint);
+    auto newClient = std::make_shared<Client>(endpoint);
+    newClient->setPairClient(uuid);
+
+    std::lock_guard<std::mutex> lock(clientMutex);
+    clients[uuid] = newClient;
     return uuid;
 }
 
