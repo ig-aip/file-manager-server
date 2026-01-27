@@ -150,8 +150,10 @@ void FileTransfer::sendFileFromAccept(){
 void FileTransfer::receiveClientStatus(){
 // читаем и проверяем, клиент принимает или отправляет файлы по статусу
     auto self = shared_from_this();
-    asio::async_read(*socket, asio::buffer(&client->getStatus(), sizeof(Status)), [self](boost::system::error_code er, std::size_t bytes){
-        self->client->getStatus() = (Status)((int)self->client->getStatus());
+    auto ar = std::make_shared<std::array<char, 2>>();
+    asio::async_read(*socket, asio::buffer(ar->data(), ar->size()), [self](boost::system::error_code er, std::size_t bytes){
+        //self->client->getStatus() = (Status)((int)self->client->getStatus());
+        std::cout << "ar is here" << std::endl;
         std::cout <<"bytes: "<< bytes << "status: "<< (int) self->client->getStatus() << std::endl;
         if(!er){
 
@@ -167,7 +169,7 @@ void FileTransfer::receiveClientStatus(){
                     std::cout << "RECIVE : " << self->client->getUsernameLink() << std::endl;
                 }
             }
-            else if(self->client->getStatus() == Status::waiting_for_send){ //отправляющая сторона отправляет мета информацию о файле нам на сервер
+            else if(self->client->getStatus() == Status::waiting_for_send || bytes == 2){ //отправляющая сторона отправляет мета информацию о файле нам на сервер
                 std::cout << "SENDING : " << self->client->getUsernameLink() << std::endl;
                 self->receiveUUID();
             }

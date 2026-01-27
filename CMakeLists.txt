@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
 find_package(GTest CONFIG REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt5 REQUIRED COMPONENTS Core)
 
 
 
@@ -25,7 +25,7 @@ add_library(server
   net.h
   tcpHeader.h)
 
-target_link_libraries(server PUBLIC Boost::boost Qt6::Core)
+target_link_libraries(server PUBLIC Boost::boost Qt5::Core)
 
 
 add_executable(server_tests

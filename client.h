@@ -3,8 +3,8 @@
 #include "net.h"
 #include "tcpHeader.h"
 
-
-enum class Status : uint8_t{
+#pragma pack(push, 1)
+enum Status : uint8_t {
     waiting_for_send = 0,
     waiting_for_accept = 1,
     waiting = 2,
@@ -18,6 +18,8 @@ enum class Status : uint8_t{
     Connected = 7,
     Disconnected = 8
 };
+
+#pragma pack(pop)
 
 class Client
 {
