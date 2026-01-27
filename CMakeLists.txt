@@ -12,27 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
 find_package(GTest CONFIG REQUIRED)
-find_package(Qt5 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
-
-add_library(client
-  file-manager-client/ClientApp.h
-  file-manager-client/FileSystem.h
-  file-manager-client/NetworkClient.h
-  file-manager-client/SessionManager.h
-  file-manager-client/TypeConn.h
-  file-manager-client/TcpHeader.h
-  file-manager-client/ClientUI.h
-
-  file-manager-client/ClientApp.cpp
-  file-manager-client/FileSystem.cpp
-  file-manager-client/NetworkClient.cpp
-  file-manager-client/SessionManager.cpp
-  file-manager-client/TcpHeader.cpp
-  file-manager-client/ClientUI.cpp
-)
-
-target_link_libraries(client PUBLIC Boost::boost)
 
 #add_subdirectory(tests)
 add_library(server
@@ -43,7 +24,7 @@ add_library(server
   net.h
   tcpHeader.h)
 
-target_link_libraries(server PUBLIC Boost::boost Qt5::Core)
+target_link_libraries(server PUBLIC Boost::boost Qt6::Core)
 
 
 add_executable(server_tests
@@ -52,7 +33,6 @@ target_link_libraries(server_tests PRIVATE
   GTest::gtest
   GTest::gtest_main
   server
-  client
   )
 
 add_executable(file-manager-server
