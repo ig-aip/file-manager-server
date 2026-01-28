@@ -46,6 +46,8 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
 
     void receiveUUID();
     void sendUUID();
+
+    void sendStatus();
     void receiveClientStatus();
     void sendTcpHeader(std::shared_ptr<Client> acceptedClient);
     void readTcpHeader();

@@ -151,9 +151,20 @@ void FileTransfer::sendFileFromAccept(){
             }
         });
     }
-
-
 }
+
+void FileTransfer::sendStatus(){
+    auto self = shared_from_this();
+    std::lock_guard<std::mutex> lock(mtx);
+    asio::async_write(*clients.find(client->getPairClient())->second->getSocket(), asio::buffer(&client->getStatus(), sizeof(Status)),[self](boost::system::error_code er, std::size_t bytes){
+        if(!er){
+            self->sendFileFromAccept();
+        }else{
+            std::cout << er.what() << std::endl;
+        }
+    });
+}
+
 
 void FileTransfer::receiveClientStatus(){
 // читаем и проверяем, клиент принимает или отправляет файлы по статусу
@@ -172,6 +183,7 @@ void FileTransfer::receiveClientStatus(){
             }
             else if(self->client->getStatus() == Status::receiving){
                 if(self->client->getPairClient() != *self->client->getUUIDp()){
+                    self->sendStatus();
                     self->sendFileFromAccept();
                     std::cout << "RECIVE : " << self->client->getUsernameLink() << std::endl;
                 }
