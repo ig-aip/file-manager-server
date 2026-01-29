@@ -13,15 +13,18 @@
 
 //Transfer
 FileTransfer::FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger,
-                           std::unordered_map<boost::uuids::uuid, std::shared_ptr<Client>> & clients):
+                           std::unordered_map<boost::uuids::uuid, std::shared_ptr<Client>> & clients,
+                            std::mutex& mutex):
     socket(socket),
     uuid(uuid),
     logger(logger),
     clients(clients),
-    client(clients.find(uuid)->second)
+    client(clients.find(uuid)->second),
+    mtx(mutex)
 {
     client->setUUID(uuid);
     chunk.resize(CHUNK_SIZE);
+    client->setSocket(socket);
 }
 
 void FileTransfer::receiveUUID(){
@@ -95,7 +98,7 @@ void FileTransfer::sendUUID(){
 void FileTransfer::sendTcpHeader(std::shared_ptr<Client> acceptedClient){
     auto self = shared_from_this();
     asio::async_write(*acceptedClient->getSocket(), asio::buffer(&client->getTcpHeader(), sizeof(tcpHeader)), [self](boost::system::error_code er, std::size_t bytes){
-        self->receiveClientStatus(); // надо узнать, согласен ликлент на принятие файла
+        std::cout << "МЫ НИКУДА ДАЛЬШЕ НЕ ИДЁМ " <<std::endl; // надо узнать, согласен ликлент на принятие файла
     });
 }
 
@@ -126,43 +129,73 @@ void FileTransfer::readTcpHeader(){
 }
 
 void FileTransfer::sendFileFromAccept(){
-    //если есть какая то связь
-    if(client->getPairClient() != *client->getUUIDp()){
-        auto self = shared_from_this();
-        std::lock_guard<std::mutex> lock(mtx);
-        clients.find(client->getPairClient())->second->getSocket()->async_read_some(asio::buffer(chunk.data(), chunk.size()),
-                                                                                    [self](boost::system::error_code er, std::size_t bytesRead){
-            if(bytesRead == 0){
-                std::cout <<"compleated " << std::endl;
-                return;
-            }
-            if(!er){
-                asio::async_write(*self->client->getSocket(),asio::buffer(self->chunk.data(), bytesRead), [self](boost::system::error_code er1, std::size_t bytesWrite){
-                    if(!er1){
-                        self->sendFileFromAccept();
-                    }else{
-                        std::cout << "file trader " <<er1.what() << std::endl;
-                        return;
-                    }
-                });
-            }else{
-                std::cout << "file trader " <<er.what() << std::endl;
-                return;
-            }
-        });
+    std::cout << "send file starting..." << std::endl;
+    if(client->getPairClient() == *client->getUUIDp()){
+        std::cout << "MIROR UUID" << std::endl;
+        return;
     }
+
+    auto self = shared_from_this();
+
+    std::lock_guard<std::mutex> lock(mtx);
+
+    auto it = clients.find(client->getPairClient());
+    if(it == clients.end()){
+        std::cout << "CLIENT FALL" << std::endl;
+        return;
+    }
+    auto senderClient = it->second;
+
+    if(!senderClient){
+        std::cout << "PTR SENDER CLIENT IS NULL" << std::endl;
+        return;
+    }
+
+
+
+
+
+    senderClient->getSocket()->async_read_some(asio::buffer(chunk.data(), chunk.size()),
+                                                                                [self](boost::system::error_code er, std::size_t bytesRead){
+        if(bytesRead == 0){
+            std::cout <<"compleated " << std::endl;
+            return;
+        }
+        if(!er){
+            asio::async_write(*self->client->getSocket(),asio::buffer(self->chunk.data(), bytesRead), [self](boost::system::error_code er1, std::size_t bytesWrite){
+                if(!er1){
+                    self->sendFileFromAccept();
+                }else{
+                    std::cout << "file trader " <<er1.what() << std::endl;
+                    return;
+                }
+            });
+        }else{
+            std::cout << "file trader " <<er.what() << std::endl;
+            return;
+        }
+    });
+
 }
 
 void FileTransfer::sendStatus(){
     auto self = shared_from_this();
     std::lock_guard<std::mutex> lock(mtx);
-    asio::async_write(*clients.find(client->getPairClient())->second->getSocket(), asio::buffer(&client->getStatus(), sizeof(Status)),[self](boost::system::error_code er, std::size_t bytes){
-        if(!er){
-            self->sendFileFromAccept();
-        }else{
-            std::cout << er.what() << std::endl;
-        }
-    });
+    auto it = clients.find(client->getPairClient());
+    std::shared_ptr<Client> targetClient;
+    if(it != clients.end()){
+        targetClient = it->second;
+        asio::async_write(*targetClient->getSocket(), asio::buffer(&client->getStatus(), sizeof(Status)),[self](boost::system::error_code er, std::size_t bytes){
+            if(!er){
+                self->sendFileFromAccept();
+            }else{
+                std::cout << er.what() << std::endl;
+            }
+        });
+    }else{
+        std::cout << "CLIENT NOT FOUNDED" << std::endl;
+    }
+
 }
 
 
@@ -184,7 +217,6 @@ void FileTransfer::receiveClientStatus(){
             else if(self->client->getStatus() == Status::receiving){
                 if(self->client->getPairClient() != *self->client->getUUIDp()){
                     self->sendStatus();
-                    self->sendFileFromAccept();
                     std::cout << "RECIVE : " << self->client->getUsernameLink() << std::endl;
                 }
             }

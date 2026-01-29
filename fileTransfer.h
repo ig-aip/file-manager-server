@@ -37,7 +37,7 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
     std::shared_ptr<Client> client;
     std::vector<char> chunk;
     std::array<char, 128> buf;
-    std::mutex mtx;
+    std::mutex& mtx;
 
     void sendFileFromAccept();
 
@@ -54,7 +54,8 @@ class FileTransfer : public std::enable_shared_from_this<FileTransfer>
 
 public:
     FileTransfer(std::shared_ptr<tcp::socket> socket, boost::uuids::uuid uuid, Logger& logger,
-                 std::unordered_map<boost::uuids::uuid, std::shared_ptr<Client>> & clients);
+                 std::unordered_map<boost::uuids::uuid, std::shared_ptr<Client>> & clients,
+                std::mutex& mutex);
 
     void startFileSend();
 };

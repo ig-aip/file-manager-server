@@ -82,7 +82,8 @@ void Server::start_acceptor(){
                                   auto transfer = std::make_shared<FileTransfer>(sock,
                                                                                  self->addClient(sock->remote_endpoint()),
                                                                                  self->logger,
-                                                                                 self->clients);
+                                                                                 self->clients,
+                                                                                 self->clientMutex);
                                   transfer->startFileSend();
 
                               }else{
