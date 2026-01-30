@@ -6,6 +6,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <mutex>
+
 class Logger
 {
     const QString filePath{"errorLog.txt"};

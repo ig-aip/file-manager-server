@@ -10,7 +10,7 @@
 #include<boost/uuid/uuid_io.hpp>
 
 
-
+namespace id = boost::uuids;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
 using tcp = boost::asio::ip::tcp;

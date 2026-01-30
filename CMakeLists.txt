@@ -18,12 +18,13 @@ find_package(Qt5 REQUIRED COMPONENTS Core)
 
 #add_subdirectory(tests)
 add_library(server
-  client.cpp client.h
-  fileTransfer.cpp fileTransfer.h
+
+
   server.cpp server.h
   logger.cpp logger.h
   net.h
-  tcpHeader.h)
+  tcpHeader.h
+  session.h session.cpp)
 
 target_link_libraries(server PUBLIC Boost::boost Qt5::Core)
 

@@ -1,6 +1,5 @@
 #include "server.h"
 #include <iostream>
-#include "fileTransfer.h"
 Server::Server() :
     ioc(),
     acceptor(ioc){
@@ -33,20 +32,6 @@ Server::Server() :
 
 }
 
-boost::uuids::uuid Server::generateUUID() const{
-    boost::uuids::basic_random_generator<std::mt19937> generate;
-    return generate();
-}
-
-boost::uuids::uuid Server::addClient(tcp::endpoint endpoint){
-    boost::uuids::uuid uuid = generateUUID();
-    auto newClient = std::make_shared<Client>(endpoint);
-    newClient->setPairClient(uuid);
-
-    std::lock_guard<std::mutex> lock(clientMutex);
-    clients[uuid] = newClient;
-    return uuid;
-}
 
 void Server::start(){
 
@@ -71,6 +56,40 @@ void Server::start(){
     for(auto& t : pool){ t.join(); }
 }
 
+
+void Server::registerSession(std::shared_ptr<Session> newSession){
+    std::lock_guard<std::mutex> lock(clientMutex);
+    sessions[newSession->getUUID()] = newSession;
+}
+
+void Server::removeSession(id::uuid deleteUUID){
+    std::lock_guard<std::mutex> lock(clientMutex);
+    sessions.erase(deleteUUID);
+}
+
+std::shared_ptr<Session> Server::getSession(id::uuid deleteUUID){
+
+    std::lock_guard<std::mutex> lock(clientMutex);
+    auto it = sessions.find(deleteUUID);
+    if(it == sessions.end()){
+        return nullptr;
+    }else{
+        return it->second;
+    }
+}
+
+
+
+
+boost::uuids::uuid Server::generateUUID() const{
+    boost::uuids::basic_random_generator<std::mt19937> generate;
+    return generate();
+}
+
+
+
+
+
 void Server::start_acceptor(){
     std::shared_ptr<tcp::socket> sock = std::make_shared<tcp::socket>(ioc);
     auto self = shared_from_this();
@@ -79,12 +98,9 @@ void Server::start_acceptor(){
                               if(!er){
 
                                   std::cout << "connected" <<std::endl;
-                                  auto transfer = std::make_shared<FileTransfer>(sock,
-                                                                                 self->addClient(sock->remote_endpoint()),
-                                                                                 self->logger,
-                                                                                 self->clients,
-                                                                                 self->clientMutex);
-                                  transfer->startFileSend();
+                                  id::uuid sessionUUID = self->generateUUID();
+                                  auto session = std::make_shared<Session>(std::move(*sock), *self, self->logger, sessionUUID);
+                                  session->start();
 
                               }else{
                                   self->logger.message(std::string{"err in accept, error: "}.append(er.what()));
