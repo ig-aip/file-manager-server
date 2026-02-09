@@ -1,11 +1,11 @@
 #include "session.h"
 #include "server.h"
 #include "iostream"
-Session::Session(tcp::socket socket_, Server& server_, Logger& logger_, id::uuid myUUID_):
+Session::Session(tcp::socket socket_, Server& server_, id::uuid myUUID_):
             socket(std::move(socket_)),
             server(server_),
-            logger(logger_),
-            myUUID(myUUID_){
+            myUUID(myUUID_),
+            transferedBytes(0){
     chunk.resize(CHUNK_SIZE);
 }
 
@@ -43,6 +43,9 @@ void Session::readUserName(){
 }
 
 void Session::readClientStatus(){
+    if(myStatus == Status::receive_complete){
+        resetAllSessions();
+    }
     auto self = shared_from_this();
 
     asio::async_read(socket, asio::buffer(&myStatus, sizeof(Status)),
@@ -59,7 +62,10 @@ void Session::readClientStatus(){
 
             } else if(self->myStatus == Status::receiving){
                 self->sendStatus();
-
+            }
+            else if(self->myStatus == Status::waiting){
+                //значит клиент отказался принимать файл
+                self->sendRejectStatus();
             }
         }
     });
@@ -78,6 +84,20 @@ void Session::sendStatus()
     } );
 }
 
+void Session::sendRejectStatus(){
+
+    auto self = shared_from_this();
+    asio::async_write(pairSession->getSocket(), asio::buffer(&myStatus, sizeof(myStatus)),
+                      [self](boost::system::error_code er, std::size_t bytes){
+                          if(!er){
+                              self->resetAllSessions();
+                              self->readClientStatus();
+                          }else{
+                              self->onDisconnect();
+                          }
+                      } );
+}
+
 void Session::readUUID()
 {
     auto self = shared_from_this();
@@ -86,10 +106,15 @@ void Session::readUUID()
         if(!er){
             auto target = self->server.getSession(self->pairUUID);
             if(target){
-                self->pairSession = target;
+                if(target->myStatus == Status::waiting_for_accept){
+                    self->pairSession = target;
 
-                target->pairSession = self;
-                self->sendName(target->myUserName);
+                    target->pairSession = self;
+                    self->sendName(target->myUserName);
+                }else{
+                    self->sendName("N");
+                }
+
             }else{
                 self->sendName("N"); // опасно надо уточнить
             }
@@ -107,19 +132,20 @@ void Session::transferData()
     }
 
 
-    if(transferedBytes == currrentHeader.file_size_byte){
+    if(transferedBytes == currentHeader.file_size_byte){
 
-        std::cout << transferedBytes << " vs " << currrentHeader.file_size_byte << std::endl;
+        std::cout << transferedBytes << " vs " << currentHeader.file_size_byte << std::endl;
         myStatus = Status::receive_complete;
         readClientStatus();
         return;
     }
 
-    std::size_t remain = currrentHeader.file_size_byte - transferedBytes;
+    std::size_t remain = pairSession->currentHeader.file_size_byte - transferedBytes;
 
 
     auto self = shared_from_this();
-    size_t sizeToRead = std::min(chunk.size(), chunk.size());
+    size_t sizeToRead = std::min(chunk.size(), remain);
+
 
     asio::async_read(pairSession->getSocket(), asio::buffer(chunk.data(), sizeToRead),
                      [self](boost::system::error_code er, std::size_t bytesRead){
@@ -174,9 +200,11 @@ void Session::readTcpHeader()
 {
     auto self = shared_from_this();
 
-    asio::async_read(socket, asio::buffer(&currrentHeader, sizeof(currrentHeader)),
+    asio::async_read(socket, asio::buffer(&currentHeader, sizeof(currentHeader)),
                      [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
+            std::cout << "file_size: " << self->currentHeader.file_size_byte << std::endl;
+            self->pairSession->generateMyTcpHeader(self->currentHeader);
             self->sendTcpHeader();
         }else{
             self->onDisconnect();
@@ -192,9 +220,10 @@ void Session::sendTcpHeader()
 {
     auto self = shared_from_this();
 
-    asio::async_write(pairSession->getSocket(), asio::buffer(&currrentHeader, sizeof(currrentHeader)),
+    asio::async_write(pairSession->getSocket(), asio::buffer(&pairSession->currentHeader, sizeof(pairSession->currentHeader)),
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
+            std::cout << "file size" << self->currentHeader.file_size_byte << std::endl;
             self->waitClientResponse();
         }else{
             self->onDisconnect();
@@ -206,6 +235,7 @@ void Session::waitClientResponse()
 {
     //ничего не делаем
     //ждём пока реанимируют с сесии получателя
+    // -_0
 }
 
 void Session::onDisconnect()
@@ -215,6 +245,23 @@ void Session::onDisconnect()
         socket.close(er);
         server.removeSession(myUUID);
     }
+
+}
+
+void Session::resetAllSessions()
+{
+    transferedBytes = 0;
+    pairSession->myStatus = Status::waiting;
+    pairSession->pairSession = nullptr;
+    pairSession->pairUUID = id::uuid{};
+    pairSession->currentHeader = tcpHeader {};
+    pairSession->readClientStatus();
+    pairSession = nullptr;
+    pairUUID = id::uuid{};
+    currentHeader = tcpHeader{};
+    myStatus = Status::waiting;
+
+
 
 }
 
@@ -231,3 +278,15 @@ void Session::start()
 {
     sendMyUUID();
 }
+
+
+
+
+void Session::generateMyTcpHeader(tcpHeader& header){
+    std::memcpy(currentHeader.fileName, header.fileName, 225);
+    std::memcpy(currentHeader.userName, pairSession->myUserName.c_str(), 64);
+    currentHeader.file_size_byte = header.file_size_byte;
+    currentHeader.uuid = pairSession->myUUID;
+
+}
+

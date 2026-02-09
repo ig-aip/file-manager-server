@@ -2,7 +2,7 @@
 #define SESSION_H
 #include "net.h"
 #include "tcpHeader.h"
-#include "logger.h"
+
 
 
 
@@ -36,10 +36,8 @@ class Session : public std::enable_shared_from_this<Session>{
     id::uuid pairUUID;
     std::shared_ptr<Session> pairSession;
 
-    tcpHeader currrentHeader;
+    tcpHeader currentHeader;
     uint64_t transferedBytes = 0;
-
-    Logger& logger;
 
 
 
@@ -58,7 +56,7 @@ class Session : public std::enable_shared_from_this<Session>{
 
 
 
-
+    void sendRejectStatus();
     void sendStatus();
 
     void sendTcpHeader();
@@ -69,12 +67,16 @@ class Session : public std::enable_shared_from_this<Session>{
 
     void onDisconnect();
 
+    void resetAllSessions();
+
 
 public:
-    Session(tcp::socket socket_, Server& server_, Logger& logger_, id::uuid myUUID_);
+    Session(tcp::socket socket_, Server& server_, id::uuid myUUID_);
 
     id::uuid getUUID();
     tcp::socket& getSocket();
+
+    void generateMyTcpHeader(tcpHeader& header);
 
     void restart();
 

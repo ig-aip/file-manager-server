@@ -7,26 +7,22 @@ Server::Server() :
     boost::system::error_code er;
     acceptor.open(tcp::endpoint{ip::make_address_v4(IP), PORT}.protocol(), er);
     if(er){
-        logger.message(std::string{"cant open acceptor, Error: "}.append(er.what()));
         return;
     }
 
     acceptor.set_option(asio::socket_base::reuse_address(true), er);
     if(er){
-        logger.message(std::string{"cant set reuse address true, Error: "}.append(er.what()));
         return;
     }
 
     acceptor.bind(tcp::endpoint{ip::make_address_v4(IP), PORT}, er);
     if(er){
-        logger.message(std::string{"cant bind acceptor, Error: "}.append(er.what()));
         return;
     }
 
 
     acceptor.listen(asio::socket_base::max_listen_connections, er);
     if(er){
-        logger.message(std::string{"cant listen acceptor, Error: "}.append(er.what()));
         return;
     }
 
@@ -48,7 +44,6 @@ void Server::start(){
                 self->ioc.run();
 
             }catch(std::exception& ex){
-                self->logger.message(std::string{"error in threads io_context run: "}.append(ex.what()));
             }
         });
     }
@@ -99,11 +94,10 @@ void Server::start_acceptor(){
 
                                   std::cout << "connected" <<std::endl;
                                   id::uuid sessionUUID = self->generateUUID();
-                                  auto session = std::make_shared<Session>(std::move(*sock), *self, self->logger, sessionUUID);
+                                  auto session = std::make_shared<Session>(std::move(*sock), *self, sessionUUID);
                                   session->start();
 
                               }else{
-                                  self->logger.message(std::string{"err in accept, error: "}.append(er.what()));
 
                               }
 
