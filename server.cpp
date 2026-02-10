@@ -1,5 +1,5 @@
 #include "server.h"
-#include <iostream>
+
 Server::Server() :
     ioc(),
     acceptor(ioc){
@@ -7,16 +7,19 @@ Server::Server() :
     boost::system::error_code er;
     acceptor.open(tcp::endpoint{ip::make_address_v4(IP), PORT}.protocol(), er);
     if(er){
+        throw std::runtime_error("Server open error: " + er.message());
         return;
     }
 
     acceptor.set_option(asio::socket_base::reuse_address(true), er);
     if(er){
+        throw std::runtime_error("Server error set reuse_address: " + er.what());
         return;
     }
 
     acceptor.bind(tcp::endpoint{ip::make_address_v4(IP), PORT}, er);
     if(er){
+        throw std::runtime_error("Server error bind" + er.what());
         return;
     }
 
@@ -30,10 +33,7 @@ Server::Server() :
 
 
 void Server::start(){
-
-
     start_acceptor();
-
     unsigned int threads = std::max(1u, std::thread::hardware_concurrency());
     std::vector<std::thread> pool;
     pool.reserve(threads);
@@ -52,6 +52,19 @@ void Server::start(){
 }
 
 
+void Server::stop(){
+    boost::system::error_code er;
+    if(acceptor.is_open()){
+        acceptor.cancel(er);
+        acceptor.close(er);
+    }
+
+    if(!ioc.stopped()){
+        ioc.stop();
+    }
+}
+
+
 void Server::registerSession(std::shared_ptr<Session> newSession){
     std::lock_guard<std::mutex> lock(clientMutex);
     sessions[newSession->getUUID()] = newSession;
@@ -63,9 +76,9 @@ void Server::removeSession(id::uuid deleteUUID){
 }
 
 std::shared_ptr<Session> Server::getSession(id::uuid deleteUUID){
-
     std::lock_guard<std::mutex> lock(clientMutex);
     auto it = sessions.find(deleteUUID);
+
     if(it == sessions.end()){
         return nullptr;
     }else{
@@ -91,17 +104,15 @@ void Server::start_acceptor(){
     acceptor.async_accept(*sock,
                           [self, sock](const boost::system::error_code& er){
                               if(!er){
-
-                                  std::cout << "connected" <<std::endl;
                                   id::uuid sessionUUID = self->generateUUID();
                                   auto session = std::make_shared<Session>(std::move(*sock), *self, sessionUUID);
                                   session->start();
-
+                                  self->start_acceptor();
                               }else{
 
                               }
 
-                              self->start_acceptor();
+
 
                           });
 }

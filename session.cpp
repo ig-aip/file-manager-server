@@ -35,7 +35,7 @@ void Session::readUserName(){
         if(!er){
             self->server.registerSession(self);
             self->readClientStatus();
-
+            sizeof("yadro");
         }else{
             self->onDisconnect();
         }
@@ -65,6 +65,7 @@ void Session::readClientStatus(){
             }
             else if(self->myStatus == Status::waiting){
                 //значит клиент отказался принимать файл
+                std::cout << " reject" << std::endl;
                 self->sendRejectStatus();
             }
         }
@@ -182,9 +183,10 @@ void Session::sendName(std::string& name64Byte){
 //неправильный uuid
 void Session::sendName(std::string&& name64Byte){
     auto self = shared_from_this();
-    name64Byte.resize(64);
-    asio::async_write(socket, asio::buffer(name64Byte.data(), 64),
-                      [self](boost::system::error_code er, std::size_t bytes){
+    auto msg = std::make_shared<std::string>(std::move(name64Byte));
+    msg->resize(64);
+    asio::async_write(socket, asio::buffer(msg->data(), 64),
+                      [self, msg](boost::system::error_code er, std::size_t bytes){
         if(!er){
             //если был отправлен непраильный uuid возвращаеися к принятию
             self->readUUID();

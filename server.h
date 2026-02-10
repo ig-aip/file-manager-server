@@ -23,6 +23,7 @@ public:
     boost::uuids::uuid addClient(tcp::endpoint endpoint);
     Server();
     void start();
+    void stop();
 
     void registerSession(std::shared_ptr<Session> newSession);
     void removeSession(id::uuid deleteUUID);
