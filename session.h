@@ -2,6 +2,7 @@
 #define SESSION_H
 #include "net.h"
 #include "tcpHeader.h"
+#include "consolelogger.h"
 
 
 
@@ -39,7 +40,7 @@ class Session : public std::enable_shared_from_this<Session>{
     tcpHeader currentHeader;
     uint64_t transferedBytes = 0;
 
-
+    ConsoleLogger& logger;
 
     std::vector<char> chunk;
     std::array<char, 128> buf;
@@ -71,7 +72,7 @@ class Session : public std::enable_shared_from_this<Session>{
 
 
 public:
-    Session(tcp::socket socket_, Server& server_, id::uuid myUUID_);
+    Session(tcp::socket socket_, Server& server_, id::uuid myUUID_, ConsoleLogger& logger_);
 
     id::uuid getUUID();
     tcp::socket& getSocket();

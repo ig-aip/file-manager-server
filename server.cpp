@@ -105,11 +105,12 @@ void Server::start_acceptor(){
                           [self, sock](const boost::system::error_code& er){
                               if(!er){
                                   id::uuid sessionUUID = self->generateUUID();
-                                  auto session = std::make_shared<Session>(std::move(*sock), *self, sessionUUID);
+                                  auto session = std::make_shared<Session>(std::move(*sock), *self, sessionUUID, self->logger);
                                   session->start();
                                   self->start_acceptor();
                               }else{
-
+                                  self->logger.errLog("Error accept ip: ", sock->remote_endpoint().address().to_string(), " port: ",
+                                                      sock->remote_endpoint().port(), " Error: ", er.what());
                               }
 
 

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <mutex>
 #include "session.h"
+#include "consolelogger.h"
 
 class Server : public std::enable_shared_from_this<Server>
 {
@@ -13,6 +14,7 @@ class Server : public std::enable_shared_from_this<Server>
     tcp::acceptor acceptor;
     std::unordered_map<id::uuid, std::shared_ptr<Session>> sessions;
     std::mutex clientMutex;
+    ConsoleLogger logger{};
 
     void start_acceptor();
     boost::uuids::uuid generateUUID() const;

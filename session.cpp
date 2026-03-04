@@ -1,11 +1,12 @@
 #include "session.h"
 #include "server.h"
-#include "iostream"
-Session::Session(tcp::socket socket_, Server& server_, id::uuid myUUID_):
+
+Session::Session(tcp::socket socket_, Server& server_, id::uuid myUUID_, ConsoleLogger& logger_):
             socket(std::move(socket_)),
             server(server_),
             myUUID(myUUID_),
-            transferedBytes(0){
+            transferedBytes(0),
+            logger(logger_){
     chunk.resize(CHUNK_SIZE);
 }
 
@@ -50,7 +51,6 @@ void Session::readClientStatus(){
 
     asio::async_read(socket, asio::buffer(&myStatus, sizeof(Status)),
                      [self](boost::system::error_code er, std::size_t bytes){
-        std::cout << "STATUS: " << self->myStatus << std::endl;
         if(!er){
             if(self->myStatus == Status::waiting_for_send)
             {
@@ -61,10 +61,18 @@ void Session::readClientStatus(){
                 self->readClientStatus();
 
             } else if(self->myStatus == Status::receiving){
+                self->logger.log("accept ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                                 ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+                                 " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendStatus();
             }
             else if(self->myStatus == Status::waiting){
                 //значит клиент отказался принимать файл
+                self->logger.log("reject ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                                 ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+                                 " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 std::cout << " reject" << std::endl;
                 self->sendRejectStatus();
             }
@@ -78,6 +86,10 @@ void Session::sendStatus()
     asio::async_write(pairSession->getSocket(), asio::buffer(&myStatus, sizeof(myStatus)),
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
+            self->logger.log("transfer ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
+                            self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                             ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+                             " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
             self->transferData();
         }else{
             self->onDisconnect();
@@ -278,6 +290,8 @@ tcp::socket &Session::getSocket()
 
 void Session::start()
 {
+    logger.log("start ip: ", socket.remote_endpoint().address().to_string(), " port: ", socket.remote_endpoint().port(),
+                " UUID: ", boost::uuids::to_string(myUUID));
     sendMyUUID();
 }
 
