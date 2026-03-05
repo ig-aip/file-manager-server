@@ -1,4 +1,0 @@
-C:/release_projects/file-manager-server/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/CMakeFiles/server.dir
-C:/release_projects/file-manager-server/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/CMakeFiles/file-manager-server.dir
-C:/release_projects/file-manager-server/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
-C:/release_projects/file-manager-server/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
