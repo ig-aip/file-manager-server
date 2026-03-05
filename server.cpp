@@ -104,6 +104,12 @@ void Server::start_acceptor(){
     acceptor.async_accept(*sock,
                           [self, sock](const boost::system::error_code& er){
                               if(!er){
+                                  asio::socket_base::receive_buffer_size receive_base(6 * 1024 * 1024 );
+                                  asio::socket_base::send_buffer_size send_base(6 * 1024 * 1024);
+
+                                  sock->set_option(receive_base);
+                                  sock->set_option(send_base);
+
                                   id::uuid sessionUUID = self->generateUUID();
                                   auto session = std::make_shared<Session>(std::move(*sock), *self, sessionUUID, self->logger);
                                   session->start();

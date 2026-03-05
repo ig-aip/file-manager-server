@@ -45,7 +45,7 @@ void Session::readUserName(){
 void Session::readClientStatus(){
     if(myStatus == Status::receive_complete){
         logger.log("compleate ", "sender(ip: " ,  pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                         pairSession->socket.remote_endpoint().port(), " UUID: ", pairUUID, " name: ", pairSession->myUserName.erase(pairSession->myUserName.find_last_not_of('\0') + 1),
+                         pairSession->socket.remote_endpoint().port(), " UUID: ", pairSession->myUUID, " name: ", pairSession->myUserName.erase(pairSession->myUserName.find_last_not_of('\0') + 1),
                          ") reciver(ip: ",socket.remote_endpoint().address().to_string(), " port: ", socket.remote_endpoint().port(),
                          " UUID: ",myUUID, " name: ", myUserName.erase(myUserName.find_last_not_of('\0') + 1)," ) file(name: ", currentHeader.fileName, " size: ", currentHeader.file_size_byte, " )");
         resetAllSessions();
@@ -65,7 +65,7 @@ void Session::readClientStatus(){
 
             } else if(self->myStatus == Status::receiving){
                 self->logger.log("accept ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                                  ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
                                  " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendStatus();
@@ -73,7 +73,7 @@ void Session::readClientStatus(){
             else if(self->myStatus == Status::waiting){
                 //значит клиент отказался принимать файл
                 self->logger.log("reject ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                                  ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
                                  " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendRejectStatus();
@@ -89,7 +89,7 @@ void Session::sendStatus()
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
             self->logger.log("transfer ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                             self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                             self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                              ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
                              " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
             self->transferData();
@@ -161,7 +161,7 @@ void Session::transferData()
     size_t sizeToRead = std::min(chunk.size(), remain);
 
 
-    asio::async_read(pairSession->getSocket(), asio::buffer(chunk.data(), sizeToRead),
+    pairSession->getSocket().async_read_some(asio::buffer(chunk.data(), sizeToRead),
                      [self](boost::system::error_code er, std::size_t bytesRead){
         if(!er && bytesRead > 0){
             asio::async_write(self->socket, asio::buffer(self->chunk.data(), bytesRead),
@@ -254,6 +254,7 @@ void Session::waitClientResponse()
 void Session::onDisconnect()
 {
     if(socket.is_open()){
+        logger.log("disconnect ip: ",socket.remote_endpoint().address().to_string(), " port: ",socket.remote_endpoint().port(), " UUID: ", myUUID, " name: ", myUserName);
         boost::system::error_code er;
         socket.close(er);
         server.removeSession(myUUID);
