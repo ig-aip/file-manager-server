@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    image: fm-server:latest
+    container_name: my-running-server
+    ports:
+      - "55555:55555"
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
