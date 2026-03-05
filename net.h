@@ -8,7 +8,9 @@
 const std::string IP = "0.0.0.0";
 const int PORT = 55555;
 const int USERNAME_LENGHT = 64;
-const int CHUNK_SIZE = 4 * 1024 * 1024;
+
+const int CHUNK_SIZE = 4  * 1024 * 1024;
+
 
 namespace id = boost::uuids;
 namespace asio = boost::asio;
