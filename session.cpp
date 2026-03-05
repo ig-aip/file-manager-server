@@ -36,7 +36,6 @@ void Session::readUserName(){
         if(!er){
             self->server.registerSession(self);
             self->readClientStatus();
-            sizeof("yadro");
         }else{
             self->onDisconnect();
         }
@@ -45,6 +44,10 @@ void Session::readUserName(){
 
 void Session::readClientStatus(){
     if(myStatus == Status::receive_complete){
+        logger.log("compleate ", "sender(ip: " ,  pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
+                         pairSession->socket.remote_endpoint().port(), " UUID: ", pairUUID, " name: ", pairSession->myUserName.erase(pairSession->myUserName.find_last_not_of('\0') + 1),
+                         ") reciver(ip: ",socket.remote_endpoint().address().to_string(), " port: ", socket.remote_endpoint().port(),
+                         " UUID: ",myUUID, " name: ", myUserName.erase(myUserName.find_last_not_of('\0') + 1)," ) file(name: ", currentHeader.fileName, " size: ", currentHeader.file_size_byte, " )");
         resetAllSessions();
     }
     auto self = shared_from_this();
@@ -62,18 +65,17 @@ void Session::readClientStatus(){
 
             } else if(self->myStatus == Status::receiving){
                 self->logger.log("accept ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                                  ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
-                                 " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
+                                 " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendStatus();
             }
             else if(self->myStatus == Status::waiting){
                 //значит клиент отказался принимать файл
                 self->logger.log("reject ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                                  ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
-                                 " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
-                std::cout << " reject" << std::endl;
+                                 " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendRejectStatus();
             }
         }
@@ -87,9 +89,9 @@ void Session::sendStatus()
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
             self->logger.log("transfer ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                            self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName,
+                             self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
                              ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
-                             " UUID: ",self->myUUID, " name: ", self->myUserName," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
+                             " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
             self->transferData();
         }else{
             self->onDisconnect();
@@ -147,7 +149,6 @@ void Session::transferData()
 
     if(transferedBytes == currentHeader.file_size_byte){
 
-        std::cout << transferedBytes << " vs " << currentHeader.file_size_byte << std::endl;
         myStatus = Status::receive_complete;
         readClientStatus();
         return;
@@ -217,7 +218,6 @@ void Session::readTcpHeader()
     asio::async_read(socket, asio::buffer(&currentHeader, sizeof(currentHeader)),
                      [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            std::cout << "file_size: " << self->currentHeader.file_size_byte << std::endl;
             self->pairSession->generateMyTcpHeader(self->currentHeader);
             self->sendTcpHeader();
         }else{
@@ -237,7 +237,6 @@ void Session::sendTcpHeader()
     asio::async_write(pairSession->getSocket(), asio::buffer(&pairSession->currentHeader, sizeof(pairSession->currentHeader)),
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            std::cout << "file size" << self->currentHeader.file_size_byte << std::endl;
             self->waitClientResponse();
         }else{
             self->onDisconnect();
