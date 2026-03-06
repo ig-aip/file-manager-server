@@ -106,7 +106,9 @@ void Server::start_acceptor(){
                               if(!er){
                                   asio::socket_base::receive_buffer_size receive_base(6 * 1024 * 1024 );
                                   asio::socket_base::send_buffer_size send_base(6 * 1024 * 1024);
+                                  boost::asio::ip::tcp::no_delay option(true);
 
+                                  sock->set_option(option);
                                   sock->set_option(receive_base);
                                   sock->set_option(send_base);
 
