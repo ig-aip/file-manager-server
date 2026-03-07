@@ -26,4 +26,4 @@ WORKDIR /root/
 COPY --from=builder /app/build/file-manager-server .
 EXPOSE 55555
 CMD ["./file-manager-server"]
-ADxc
+
