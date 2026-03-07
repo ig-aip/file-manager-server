@@ -44,9 +44,9 @@ void Session::readUserName(){
 
 void Session::readClientStatus(){
     if(myStatus == Status::receive_complete){
-        logger.log("compleate ", "sender(ip: " ,  pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                         pairSession->socket.remote_endpoint().port(), " UUID: ", pairSession->myUUID, " name: ", pairSession->myUserName.erase(pairSession->myUserName.find_last_not_of('\0') + 1),
-                         ") reciver(ip: ",socket.remote_endpoint().address().to_string(), " port: ", socket.remote_endpoint().port(),
+        logger.log("compleate ", "sender(ip: " ,  pairSession->ipS, " port: " ,
+                         pairSession->portS, " UUID: ", pairSession->myUUID, " name: ", pairSession->myUserName.erase(pairSession->myUserName.find_last_not_of('\0') + 1),
+                         ") reciver(ip: ",ipS, " port: ", portS,
                          " UUID: ",myUUID, " name: ", myUserName.erase(myUserName.find_last_not_of('\0') + 1)," ) file(name: ", currentHeader.fileName, " size: ", currentHeader.file_size_byte, " )");
         resetAllSessions();
     }
@@ -64,17 +64,17 @@ void Session::readClientStatus(){
                 self->readClientStatus();
 
             } else if(self->myStatus == Status::receiving){
-                self->logger.log("accept ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
-                                 ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+                self->logger.log("accept ", "sender(ip: " ,  self->pairSession->ipS, " port: " ,
+                                 self->pairSession->portS, " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                                 ") reciver(ip: ",self->ipS, " port: ", self->portS,
                                  " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendStatus();
             }
             else if(self->myStatus == Status::waiting){
                 //значит клиент отказался принимать файл
-                self->logger.log("reject ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                                 self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
-                                 ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+                self->logger.log("reject ", "sender(ip: " ,  self->pairSession->ipS, " port: " ,
+                                 self->pairSession->portS, " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                                 ") reciver(ip: ",self->ipS, " port: ", self->portS,
                                  " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
                 self->sendRejectStatus();
             }
@@ -88,9 +88,9 @@ void Session::sendStatus()
     asio::async_write(pairSession->getSocket(), asio::buffer(&myStatus, sizeof(myStatus)),
                       [self](boost::system::error_code er, std::size_t bytes){
         if(!er){
-            self->logger.log("transfer ", "sender(ip: " ,  self->pairSession->socket.remote_endpoint().address().to_string(), " port: " ,
-                             self->pairSession->socket.remote_endpoint().port(), " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
-                             ") reciver(ip: ",self->socket.remote_endpoint().address().to_string(), " port: ", self->socket.remote_endpoint().port(),
+            self->logger.log("transfer ", "sender(ip: " ,  self->pairSession->ipS, " port: " ,
+                             self->pairSession->portS, " UUID: ", self->pairSession->myUUID, " name: ", self->pairSession->myUserName.erase(self->pairSession->myUserName.find_last_not_of('\0') + 1),
+                             ") reciver(ip: ",self->ipS, " port: ", self->portS,
                              " UUID: ",self->myUUID, " name: ", self->myUserName.erase(self->myUserName.find_last_not_of('\0') + 1)," ) file(name: ", self->currentHeader.fileName, " size: ", self->currentHeader.file_size_byte, " )");
             self->transferData();
         }else{
@@ -153,7 +153,13 @@ void Session::transferData()
         readClientStatus();
         return;
     }
+    if(initPipe()){
+        spliceRead();
+    }else{
+        onDisconnect();
+    }
 
+/*
     std::size_t remain = pairSession->currentHeader.file_size_byte - transferedBytes;
 
 
@@ -177,6 +183,7 @@ void Session::transferData()
             self->onDisconnect();
         }
     });
+*/
 }
 
 
@@ -254,7 +261,8 @@ void Session::waitClientResponse()
 void Session::onDisconnect()
 {
     if(socket.is_open()){
-        logger.log("disconnect ip: ",socket.remote_endpoint().address().to_string(), " port: ",socket.remote_endpoint().port(), " UUID: ", myUUID, " name: ", myUserName);
+        closePipe();
+        logger.log("disconnect ip: ",ipS, " port: ",portS, " UUID: ", myUUID, " name: ", myUserName);
         boost::system::error_code er;
         socket.close(er);
         server.removeSession(myUUID);
@@ -274,9 +282,115 @@ void Session::resetAllSessions()
     pairUUID = id::uuid{};
     currentHeader = tcpHeader{};
     myStatus = Status::waiting;
+    closePipe();
+
+}
+
+bool Session::initPipe()
+{
+    if(!pipeInit){
+        if(pipe(pipeFds) < 0){
+            logger.errLog("failed createPipe");
+            return false;
+        }
+
+        fcntl(pipeFds[0], F_SETFL, O_NONBLOCK);
+        fcntl(pipeFds[1], F_SETFL, O_NONBLOCK);
+
+        fcntl(pipeFds[0], F_SETPIPE_SZ, 1024 * 1024);
+
+        pipeInit = true;
+        return true;
+    }
+    return true;
+}
+
+void Session::closePipe()
+{
+    if(pipeInit){
+        close(pipeFds[0]);
+        close(pipeFds[1]);
+        pipeInit = false;
+    }
+}
+
+void Session::spliceRead()
+{
+    auto self = shared_from_this();
+
+    pairSession->socket.async_wait(asio::socket_base::wait_read,
+       [self](boost::system::error_code er){
+           if(er){
+               self->onDisconnect();
+               return;
+           }
+
+           size_t remain = self->currentHeader.file_size_byte - self->transferedBytes;
+           size_t toTransfer = std::min<size_t>(remain, 1024 * 1024);
+
+           int sender = self->pairSession->socket.native_handle();
+
+           ssize_t splicedBytes = splice(
+                   sender, NULL,
+                   self->pipeFds[1], NULL,
+                   toTransfer,
+                   SPLICE_F_MOVE | SPLICE_F_NONBLOCK);
+
+           if(splicedBytes > 0){
+               self->spliceWrite(splicedBytes);
+
+           }else if(splicedBytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+
+               self->spliceRead();
+
+           }else if(splicedBytes == 0){
+
+               self->onDisconnect();
+           }else{
+               self->logger.errLog("error in splice read: ", strerror(errno));
+               self->onDisconnect();
+           }
+
+       });
+}
+
+void Session::spliceWrite(size_t bytesInPipe)
+{
+    auto self = shared_from_this();
+
+    socket.async_wait(asio::socket_base::wait_write,
+                      [self, bytesInPipe](boost::system::error_code er){
+                          if(er){
+                              self->onDisconnect();
+                              return;
+                          }
+
+                          int received = self->socket.native_handle();
+
+                          ssize_t splicedBytes = splice(
+                              self->pipeFds[0], NULL,
+                              received, NULL,
+                              bytesInPipe,
+                              SPLICE_F_MOVE | SPLICE_F_NONBLOCK);
+
+                          if(splicedBytes > 0){
+                              self->transferedBytes += splicedBytes;
+
+                              if(splicedBytes < bytesInPipe){
+                                  self->spliceWrite(bytesInPipe - splicedBytes);
+                              }else{
+                                  self->transferData();
+                              }
+                          }else if( splicedBytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+                              self->spliceWrite(bytesInPipe);
+                          }else{
+                              self->logger.errLog("error in bytesInPipe ip: ",self->socket.remote_endpoint().address().to_string(),
+                                                  " port: ",self->socket.remote_endpoint().port(), " UUID: ", self->myUUID, " name: ", self->myUserName);
+                              self->onDisconnect();
+                          }
 
 
-
+                      });
 }
 
 id::uuid Session::getUUID(){
@@ -290,9 +404,17 @@ tcp::socket &Session::getSocket()
 
 void Session::start()
 {
-    logger.log("start ip: ", socket.remote_endpoint().address().to_string(), " port: ", socket.remote_endpoint().port(),
+    ipS = socket.remote_endpoint().address().to_string();
+    portS = socket.remote_endpoint().port();
+
+    logger.log("start ip: ", ipS, " port: ", portS,
                 " UUID: ", boost::uuids::to_string(myUUID));
     sendMyUUID();
+}
+
+Session::~Session()
+{
+    closePipe();
 }
 
 

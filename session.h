@@ -3,6 +3,7 @@
 #include "net.h"
 #include "tcpHeader.h"
 #include "consolelogger.h"
+#include <fcntl.h>
 
 
 
@@ -33,6 +34,12 @@ class Session : public std::enable_shared_from_this<Session>{
     id::uuid myUUID;
     std::string myUserName;
     Status myStatus;
+
+    std::string ipS;
+    int portS;
+
+    int pipeFds[2] = {-1, -1};//read, write
+    bool pipeInit = false;
 
     id::uuid pairUUID;
     std::shared_ptr<Session> pairSession;
@@ -71,6 +78,12 @@ class Session : public std::enable_shared_from_this<Session>{
     void resetAllSessions();
 
 
+    bool initPipe();
+    void closePipe();
+    void spliceRead();
+    void spliceWrite(size_t bytesInPipe);
+
+
 public:
     Session(tcp::socket socket_, Server& server_, id::uuid myUUID_, ConsoleLogger& logger_);
 
@@ -82,6 +95,8 @@ public:
     void restart();
 
     void start();
+
+    ~Session();
 };
 
 
